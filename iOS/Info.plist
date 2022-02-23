@@ -23,10 +23,10 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Allow XLII to access the camera to scan characters</string>
+	<string>Allow XLII to access the camera to scan characters.</string>
 	<key>NSUserActivityTypes</key>
 	<array>
-		<string>com.mihomaus.RoemischeZahl.conversionActivity</string>
+		<string>com.mihomaus.XLII.conversionActivity</string>
 	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
@@ -35,8 +35,6 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-	<key>UILaunchScreen</key>
-	<dict/>
 	<key>UILaunchStoryboardName</key>
 	<string>Launch Screen</string>
 	<key>UIRequiredDeviceCapabilities</key>
@@ -48,6 +46,7 @@
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>

@@ -23,7 +23,7 @@ struct Tausender: AlsArabischeZahl{
             return ""
         case 1...3:
             return Array(repeating: "M", count: anzahl).joined()
-        
+            
         default:
             let zehner = Zehner(Zahl: anzahl)
             let einser = Einer(Zahl: anzahl)
@@ -42,7 +42,7 @@ struct Tausender: AlsArabischeZahl{
                     return String(c) + String(overbar)
                 })
                 millions = overbarMillions.joined()
-
+                
             }
             else{
                 millions = ""
@@ -70,10 +70,11 @@ struct Tausender: AlsArabischeZahl{
         }
         anzahl=gefundeneMs
     }
+    
 }
 
 
-struct JapanischeTausender: AlsJapanischeZahl, AlsArabischeZahl, AlsJapanischeBankZahl{
+struct JapanischeTausender: AlsJapanischeZahl, AlsArabischeZahl, AlsJapanischeBankZahl, AlsAegaeischeZahl, AlsSangiZahl{
     
     let anzahl:Int
     let multiplikator:Int = 1000
@@ -112,7 +113,31 @@ struct JapanischeTausender: AlsJapanischeZahl, AlsArabischeZahl, AlsJapanischeBa
                                                              7:"七千",
                                                              8:"八千",
                                                              9:"九千",
-                                ]
+    ]
+    
+    let arabischAegeanDict: [Int : String] = [0:"",
+                                              1:"𐄢",
+                                              2:"𐄣",
+                                              3:"𐄤",
+                                              4:"𐄥",
+                                              5:"𐄦",
+                                              6:"𐄧",
+                                              7:"𐄨",
+                                              8:"𐄩",
+                                              9:"𐄪"
+    ]
+    
+    let arabischSangiDict: [Int : String] = [0:" ",
+                                             1:"𝍩",
+                                             2:"𝍪",
+                                             3:"𝍫",
+                                             4:"𝍬",
+                                             5:"𝍭",
+                                             6:"𝍮",
+                                             7:"𝍯",
+                                             8:"𝍰",
+                                             9:"𝍱"
+    ]
     
     init(Zahl:Int){
         let zehnTausender = Zahl / (multiplikator*10)
@@ -162,5 +187,18 @@ struct JapanischeTausender: AlsJapanischeZahl, AlsArabischeZahl, AlsJapanischeBa
             }
         
         self.anzahl=a.first?.key ?? 0
+    }
+    
+    init?(aegeanNumber:String){
+        if let a=self.arabischAegeanDict
+            .first(where: {_,n in
+                return n == aegeanNumber
+            }){
+            self.anzahl=a.key * multiplikator
+        }
+        else{
+            return nil
+        }
+        
     }
 }

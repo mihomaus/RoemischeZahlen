@@ -11,6 +11,14 @@ import AVFoundation
 extension Output{
     var voice:AVSpeechSynthesisVoice?{
         switch self {
+        case .localized(let locale):
+            if let language=locale.languageCode{
+                return AVSpeechSynthesisVoice(language: language)
+            }
+            else{
+                return nil
+            }
+            
         case .japanisch:
             return AVSpeechSynthesisVoice(language: "ja")
         default:
@@ -37,26 +45,12 @@ struct SpeechOutput{
         self.format=format
     }
     
-    init(text:String) {
-        switch text {
-        case _ where text.potenzielleRömischeZahl:
-            self.format = .römisch
-        case _ where text.potenzielleJapanischeZahl:
-            self.format = .japanisch
-        case _ where Int(text) != nil:
-            self.format = .arabisch
-        default:
-            self.format = .arabisch
-        }
-        
-        self.text=text
-    }
     
     var utterances:[AVSpeechUtterance]{
         let outputUtterances: [AVSpeechUtterance]
         
         switch self.format {
-        case .römisch:
+        case .römisch, .numeric(_):
             let textWithSpace=self.text.map({String($0)})
             outputUtterances = textWithSpace.map({t->AVSpeechUtterance in
                 let u=AVSpeechUtterance(string: t.lowercased())
@@ -72,12 +66,14 @@ struct SpeechOutput{
             u.rate=0.35
             u.preUtteranceDelay=0.6
             outputUtterances=[u]
-        case .japanisch, .japanisch_bank:
+        case .japanisch, .japanisch_bank, .localized(_):
             let u=AVSpeechUtterance(string:self.text)
             u.voice=self.format.voice
             u.rate=0.35
             u.preUtteranceDelay=0.6
             outputUtterances=[u]
+        case .babylonian, .aegean, .sangi, .hieroglyph, .suzhou, .phoenician:
+            outputUtterances = [AVSpeechUtterance]()
         }
         return outputUtterances
     }
@@ -85,6 +81,21 @@ struct SpeechOutput{
 }
 
 class ExotischeZahlenFormatter{
+    
+    struct NumericalOutput{
+        
+        enum InputLocale{
+            case roman
+            case japanese
+            case suzhou
+            case hieroglyph
+            case aegean
+            case phoenician
+        }
+        
+        let value:Int
+        let locale:InputLocale
+    }
     
     lazy var synthesizer:AVSpeechSynthesizer=AVSpeechSynthesizer()
     
@@ -107,20 +118,46 @@ class ExotischeZahlenFormatter{
     }
     
     func macheJapanischeZahl(aus Zahl:Int)->String?{
+        
+        switch Zahl{
+        case ..<0:
+            return nil
+        case 0:
+            return "〇"
+        case 0...:
+            let z:[AlsJapanischeZahl]=[TenQuadrillion(Zahl: Zahl),
+                                       OneTrillion(Zahl: Zahl),
+                                       HundertMillionen(Zahl: Zahl),
+                                       ZehnTausender(Zahl: Zahl),
+                                       JapanischeTausender(Zahl: Zahl),
+                                       Hunderter(Zahl: Zahl),
+                                       Zehner(Zahl: Zahl),
+                                       Einer(Zahl: Zahl)]
+            return z.reduce("", {r, z in
+                r+z.japanisch
+            })
+        default:
+            return nil
+        }
+        
+        
+    }
+    
+    func macheSuzhouZahl(aus Zahl:Int)->String?{
         guard Zahl > 0 else {
             return nil
         }
-        let z:[AlsJapanischeZahl]=[HundertMillionen(Zahl: Zahl), ZehnTausender(Zahl: Zahl), JapanischeTausender(Zahl: Zahl), Hunderter(Zahl: Zahl), Zehner(Zahl: Zahl),Einer(Zahl: Zahl)]
-        return z.reduce("", {r, z in
-            r+z.japanisch
-        })
+        let suzhou=SuzhouZahl(Zahl: Zahl)
+        return suzhou.suzhou
     }
     
     func macheJapanischeBankZahl(aus Zahl:Int, einfach:Bool)->String?{
-        guard Zahl > 0, Zahl < 100_000_000_000 else {
+        guard Zahl > 0, Zahl < Int.max else {
             return nil
         }
-        let z:[AlsJapanischeBankZahl]=[HundertMillionen(Zahl: Zahl),
+        let z:[AlsJapanischeBankZahl]=[TenQuadrillion(Zahl: Zahl),
+                                       OneTrillion(Zahl: Zahl),
+                                       HundertMillionen(Zahl: Zahl),
                                        ZehnTausender(Zahl: Zahl),
                                        JapanischeTausender(Zahl: Zahl),
                                        Hunderter(Zahl: Zahl),
@@ -136,22 +173,70 @@ class ExotischeZahlenFormatter{
                 r+z.japanisch_Bank
             })
         }
+    }
+    
+    func macheBabylonischeZahl(aus Zahl:Int)->String?{
+        return BabylonischeZahl(Zahl: Zahl).babylonisch
+    }
+    
+    func macheAegaeischeZahl(aus Zahl:Int)->String?{
+        return AegeanZahl(number: Zahl)?.aegean
+    }
+    
+    func macheSangiZahl(aus Zahl:Int)->String?{
+        guard Zahl > 0, Zahl < 100_000 else {
+            return nil
+        }
         
-       
+        let z:[AlsSangiZahl]=[ZehnTausender(Zahl: Zahl),
+                              JapanischeTausender(Zahl: Zahl),
+                              Hunderter(Zahl: Zahl),
+                              Zehner(Zahl: Zahl),
+                              Einer(Zahl: Zahl)
+        ]
+        
+        let text = z.reduce("", {r, z in
+            r+z.sangi
+        }).trimmingPrefix(while: {$0 == " "})
+        return String(text)
+    }
+    
+    func macheHieroglyphenZahl(aus Zahl:Int)->String?{
+        return HieroglyphenZahl(Zahl: Zahl)?.hieroglyph
     }
     
     
     
-    func macheZahl(aus text:String)->Int?{
-
+    func macheZahl(aus text:String)->NumericalOutput?{
         switch text {
         case _ where text.potenzielleRömischeZahl:
-            return self.macheZahl(römisch: text)
+            if let zahl = self.macheZahl(römisch: text){
+                return NumericalOutput(value: zahl, locale: .roman)
+            }
         case _ where text.potenzielleJapanischeZahl:
-            return self.macheZahl(japanisch: text)
+            if let zahl=self.macheZahl(japanisch: text){
+                return NumericalOutput(value: zahl, locale: .japanese)
+            }
+        case _ where text.potenzielleSuzhouZahl:
+            if let zahl=SuzhouZahl(string: text){
+                return NumericalOutput(value: zahl.arabic, locale: .suzhou)
+            }
+        case _ where text.potenzielleHieroglypheZahl:
+            if let zahl=HieroglyphenZahl(string: text){
+                return NumericalOutput(value: zahl.arabic, locale: .hieroglyph)
+            }
+        case _ where text.potenziellAegaeischeZahl:
+            if let zahl=AegeanZahl(string: text){
+                return NumericalOutput(value: zahl.arabic, locale: .aegean)
+            }
+        case _ where text.potentiellePhoenizischeZahl:
+            if let zahl=PhoenizianFormatter(string: text){
+                return NumericalOutput(value: zahl.arabic, locale: .phoenician)
+            }
         default:
             return nil
         }
+        return nil
     }
     
     func macheZahl(römisch Zahl:String)->Int?{
@@ -190,18 +275,19 @@ class ExotischeZahlenFormatter{
         restZahl=restZahl.replacingOccurrences(of: zehnTausender.japanisch_Bank, with: "", options: [.backwards, .caseInsensitive, .anchored, .widthInsensitive], range: nil)
         let hundertMillionen=HundertMillionen(japanischeZahl: restZahl)
         restZahl=restZahl.replacingOccurrences(of: hundertMillionen.japanisch, with: "", options: [.backwards, .caseInsensitive, .anchored, .widthInsensitive], range: nil)
+        let trillion=OneTrillion(japanischeZahl: restZahl)
+        restZahl=restZahl.replacingOccurrences(of: trillion.japanisch, with: "", options: [.backwards, .caseInsensitive, .anchored, .widthInsensitive], range: nil)
         
         if restZahl.count > 0{
             return nil
         }
         
         
-        return hundertMillionen.arabisch + zehnTausender.arabisch + tausender.arabisch + hunderter.arabisch + zehner.arabisch + einser.arabisch
+        return trillion.arabisch + hundertMillionen.arabisch + zehnTausender.arabisch + tausender.arabisch + hunderter.arabisch + zehner.arabisch + einser.arabisch
     }
     
     
     func utterance(input:SpeechOutput, output:SpeechOutput)->[AVSpeechUtterance]{
-        
         
         let textZumSprechen=NSLocalizedString("is:", comment: "utterance string")
         let u2 = AVSpeechUtterance(string: String(textZumSprechen))
